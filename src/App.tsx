@@ -7,7 +7,7 @@ import { useControls } from 'leva'
 import { EffectComposer, HueSaturation, TiltShift2 } from '@react-three/postprocessing'
 
 export function App() {
-  const { stripes, environment, saturation, autoRotate, shadow, ...config } = useControls({
+  const { stripes, environment, saturation, /*autoRotate,*/ shadow, ...config } = useControls({
     saturation: { value: -1, min: -1, max: 0 },
     environment: true,
     backside: true,
@@ -103,7 +103,7 @@ function Text({
   lights?: boolean
   children: string
   environment?: boolean
-  config: Record<string, any>
+  config: Record<string, unknown>
   font?: string
   rotation?: [number, number, number]
   position?: [number, number, number]
@@ -127,7 +127,7 @@ function Text({
             bevelThickness={0.01}>
             {children}
             {lights ? (
-              <MeshTransmissionMaterial {...config} backside={lights && config.backside} background={lights && environment && texture} />
+              <MeshTransmissionMaterial {...config} backside={Boolean(lights && config.backside)} background={lights && environment ? texture : undefined} />
             ) : (
               <meshPhysicalMaterial {...config} transmission={0} color="#999" />
             )}
