@@ -13,7 +13,7 @@ export function App() {
     backside: true,
     backsideThickness: { value: 0.25, min: 0, max: 1, step: 0.01 },
     thickness: { value: 0.89, min: 0, max: 30, step: 0.01 },
-    samples: { value: 10, min: 1, max: 32, step: 1 },
+    samples: { value: 6, min: 1, max: 32, step: 1 },
     transmission: { value: 0.5, min: 0, max: 1 },
     clearcoat: { value: 1, min: 0.1, max: 1 },
     clearcoatRoughness: { value: 0.5, min: 0, max: 1 },
