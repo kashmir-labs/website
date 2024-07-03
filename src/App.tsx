@@ -1,10 +1,21 @@
 import { RGBELoader } from 'three-stdlib'
-import { memo } from 'react'
+import { memo, startTransition, useEffect, useState } from 'react'
 import { Canvas, useFrame, useLoader } from '@react-three/fiber'
-import { Grid, Center, Text3D, Environment, Lightformer, RandomizedLight, AccumulativeShadows, MeshTransmissionMaterial } from '@react-three/drei'
+import {
+  Grid,
+  Center,
+  Text3D,
+  Environment,
+  Lightformer,
+  RandomizedLight,
+  AccumulativeShadows,
+  MeshTransmissionMaterial,
+  OrbitControls
+} from '@react-three/drei'
 import { easing } from 'maath'
 import { useControls } from 'leva'
 import { EffectComposer, HueSaturation, TiltShift2 } from '@react-three/postprocessing'
+import { useBox, Physics } from '@react-three/cannon'
 
 export function App() {
   const { stripes, environment, saturation, /*autoRotate,*/ shadow, ...config } = useControls({
@@ -29,48 +40,58 @@ export function App() {
     shadow: 'black'
   })
 
+  const [camera, setCamera] = useState({
+    position: [0.0006230113504984972, 17.319521915688913, 0.18482484635007435],
+    zoom: window.outerWidth / 17,
+    near: 0.1,
+    far: 300
+  })
+
   return (
     <Canvas
       shadows
       orthographic
       // frameloop={autoRotate ? 'always' : 'demand'}
       // TODO: Make the camera position responsive to the screen size.
-      camera={{ position: [-10, 10, 10], zoom: 35, near: 0.1, far: 300 }}
+      camera={camera}
       gl={{ antialias: false }}>
-      <color attach="background" args={['#141420']} />
-      <group position={[0, 1, 0]}>
-        <Text lights environment={environment} config={config} rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 2.25]}>
-          Kashmir
-        </Text>
-        <Text height={0.15} environment={environment} config={config} rotation={[0, 0, 0]} position={[-1, -1, 8]}>
-          Labs
-        </Text>
-        <Shadows shadow={shadow} />
-        <Grid
-          position={[0, -1, 0]}
-          cellSize={2.25}
-          cellThickness={1}
-          cellColor="#3a3a3a"
-          sectionSize={5.5}
-          sectionThickness={1.5}
-          sectionColor={stripes}
-          fadeDistance={40}
-          fadeStrength={1}
-          infiniteGrid
-        />
-      </group>
-      <Environment resolution={32}>
-        <group rotation={[-Math.PI / 4, -0.3, 0]}>
-          <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 5, -9]} scale={[10, 10, 1]} />
-          <Lightformer intensity={1} rotation-y={Math.PI / 2} position={[-10, 0, -1]} scale={[10, 2, 1]} />
-          <Lightformer intensity={0.5} rotation-y={-Math.PI / 2} position={[10, 1, 0]} scale={[20, 10, 1]} />
+      <Physics>
+        <color attach="background" args={['#141420']} />
+        <group position={[0, 1, 0]}>
+          <Text lights environment={environment} config={config} rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 2.25]}>
+            Kashmir
+          </Text>
+          <Text height={0.15} environment={environment} config={config} rotation={[0, 0, 0]} position={[-1, -1, 8]}>
+            Labs
+          </Text>
+          <Shadows shadow={shadow} />
+          <Grid
+            position={[0, -1, 0]}
+            cellSize={2.25}
+            cellThickness={1}
+            cellColor="#3a3a3a"
+            sectionSize={5.5}
+            sectionThickness={1.5}
+            sectionColor={stripes}
+            fadeDistance={40}
+            fadeStrength={1}
+            infiniteGrid
+          />
         </group>
-      </Environment>
-      <EffectComposer enableNormalPass={false} multisampling={4}>
-        <HueSaturation hue={6} saturation={saturation} />
-        <TiltShift2 blur={0.15} />
-      </EffectComposer>
-      <Rig />
+        <Environment resolution={32}>
+          <group rotation={[-Math.PI / 4, -0.3, 0]}>
+            <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 5, -9]} scale={[10, 10, 1]} />
+            <Lightformer intensity={1} rotation-y={Math.PI / 2} position={[-10, 0, -1]} scale={[10, 2, 1]} />
+            <Lightformer intensity={0.5} rotation-y={-Math.PI / 2} position={[10, 1, 0]} scale={[20, 10, 1]} />
+          </group>
+        </Environment>
+        <EffectComposer disableNormalPass multisampling={4}>
+          <HueSaturation hue={6} saturation={saturation} />
+          <TiltShift2 blur={0.15} />
+        </EffectComposer>
+        {<Rig setCamera={setCamera} />}
+        <OrbitControls />
+      </Physics>
     </Canvas>
   )
 }
@@ -81,11 +102,26 @@ const Shadows = memo(({ shadow }: { shadow?: string }) => (
   </AccumulativeShadows>
 ))
 
-function Rig() {
+function Rig({ setCamera }) {
+  const [isMounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // TODO: On mobile, use the accelerometer to rotate the camera.
   useFrame((state, delta) => {
-    easing.damp3(state.camera.position, [-12.5 + state.pointer.x, 12.5 + state.pointer.y, 15 + Math.atan(state.pointer.x * 2)], 0.5, delta)
-    state.camera.lookAt(2, -1, 0)
+    if (!isMounted) {
+      console.log(state)
+    }
+
+    const zoom = isMounted ? window.outerWidth / 35 : window.outerWidth / 17
+    easing.damp(state.camera, 'zoom', zoom, 1, delta)
+    state.camera.updateProjectionMatrix()
+    // state.camera.zoom = window.outerWidth / 35
+
+    // easing.damp3(state.camera.position, [-12.5 + state.pointer.x, 12.5 + state.pointer.y, 15 + Math.atan(state.pointer.x * 2)], 0.5, delta)
+    // state.camera.lookAt(2, -1, 0)
   })
 
   return null
@@ -109,12 +145,14 @@ function Text({
   position?: [number, number, number]
 }) {
   const texture = useLoader(RGBELoader, 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/fireplace_1k.hdr')
+  // const [ref] = useBox(() => ({ mass: 1, position: [0, 0, 0] }))
 
   return (
     <>
       <group>
         <Center scale={1} front top {...props}>
           <Text3D
+            // ref={ref}
             castShadow
             bevelEnabled
             font="helvetiker_bold.typeface.json"
